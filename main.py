@@ -51,7 +51,7 @@ def mkdir(path):
     safe_path = resolve_strict_path(path)
     safe_path.mkdir()
 
-def exec_cmd(cmd):
+def exec_cmd(*cmd):
     while True:
         res = input(
             f"The agent wants to run this command:\n`{cmd}`\n"
@@ -60,7 +60,7 @@ def exec_cmd(cmd):
 
         if res == "y":
             proc = subprocess.run(
-                cmd,
+                list(cmd),
                 capture_output=True,
                 text=True
             )
@@ -76,11 +76,11 @@ def exec_cmd(cmd):
             continue
 
 register_tool("readfile", "Reads file using relative path", ["\"path\": string - relative (from project root) path to file", "\"startline\" (optional, default: 0): integer - the line from which the reading should begin", "\"endline\" (optional, default: 128): integer - line to which the file is to be read"], read_file)
-register_tool("writefile", "Overwrites file by new content using relative path **without creating**", ["\"path\": string - relative (from project root) path to file", "\"new_content\": string - new content for file" ], write_file)
+register_tool("writefile", "Overwrites file with the new content using relative path **without creating**", ["\"path\": string - relative (from project root) path to file", "\"new_content\": string - new content for file" ], write_file)
 register_tool("readdir", "Lists up to 64 files and subdirectories in given directory", ["\"path\": string - relative (from project root) path to file", "\"start_index\" (optional, default: 5): integer - skips first N files" ], read_dir)
 register_tool("createfile", "Creates new empty file using relative path", ["\"path\": string - relative (from project root) path to file" ], create_file)
 register_tool("mkdir", "Creates new empty directory using relative path", ["\"path\": string - relative (from project root) path to file" ], mkdir)
-register_tool("runcmd", "Executes a shell command. Command and args must be given as single argument. Neither you nor the user have access to stdin, so whenever possible, run commands that do not require user intervention.", ["\"cmd\": string - name of cmd with arguments as single string" ], exec_cmd)
+register_tool("runcmd", "Executes a shell command. Command and args must be given as single argument. Neither you nor the user have access to stdin, so whenever possible, run commands that do not require user intervention.", ["\"cmd\": string[] - name of cmd (index 0) with arguments (index 1-n)" ], exec_cmd)
 
 tools_result = None
 

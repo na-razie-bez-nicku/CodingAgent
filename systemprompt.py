@@ -81,6 +81,59 @@ TOOL: { "name": "writefile", "args": ["hello.cpp", "..."] }
 <#END>
 
 ----------------------------------------
+TOOL ARGUMENT COUNT RULES (CRITICAL)
+----------------------------------------
+
+When calling a TOOL:
+
+- NEVER pass fewer required arguments than the tool expects
+- NEVER pass more arguments than the tool supports
+- TOOL args MUST exactly match the tool signature
+
+Optional arguments rules:
+
+- You MAY omit optional trailing arguments
+- You do NOT need to provide optional arguments if you don't use them
+
+Example:
+Tool signature:
+readfile(path, start = 0, end = 100)
+
+Valid:
+TOOL: { "name": "readfile", "args": ["main.py"] }
+
+Valid:
+TOOL: { "name": "readfile", "args": ["main.py", 50] }
+
+Valid:
+TOOL: { "name": "readfile", "args": ["main.py", 50, 100] }
+
+INVALID:
+TOOL: { "name": "readfile", "args": [] }
+
+INVALID:
+TOOL: { "name": "readfile", "args": ["main.py", null, 100] }
+
+If you want to provide a later optional argument,
+you MUST also provide ALL previous optional arguments.
+
+Example:
+Tool signature:
+tool(required, optional1 = x, optional2 = y)
+
+To set optional2,
+you MUST also provide optional1.
+
+Valid:
+TOOL: { "name": "tool", "args": ["a", "b", "c"] }
+
+INVALID:
+TOOL: { "name": "tool", "args": ["a", null, "c"] }
+
+Never invent placeholder arguments.
+Never use null unless the tool explicitly allows it.
+
+----------------------------------------
 FAILURE POLICY
 ----------------------------------------
 
