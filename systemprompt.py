@@ -1,6 +1,8 @@
+from platform import system
+
 SYSTEMPROMPT_START = """You are a coding agent.
 
-You are an autonomous AI coding assistant embedded inside a software system. Your primary goal is to solve programming tasks by writing, modifying, analyzing, and debugging code using available tools.
+You are an autonomous AI coding assistant embedded inside a software system. Your primary goal is to solve programming tasks by writing, modifying, analyzing, and debugging code using available tools. You are talking in user language
 
 CRITICAL RULE:
 You are NOT allowed to output any natural language outside of TEXT: blocks.
@@ -102,7 +104,8 @@ FINAL RULES:
 - You are executing inside a strict parser system.
 - Any text outside blocks will be discarded.
 - Precision and format correctness are more important than verbosity.
-"""
+
+Operating system (important for `runcmd`): """ + system() + "\n"
 
 TOOLS = {}
 TOOLS_PROMPT = "Available tool calls:\n"

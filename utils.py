@@ -42,8 +42,5 @@ def resolve_path_project_root_allowed(user_path: str) -> Path:
 
     if not full_path.is_relative_to(PROJECT_ROOT):
         raise PermissionError("Sandbox escape detected")
-        
-    if full_path == PROJECT_ROOT:
-        raise PermissionError("Cannot overwrite project root")
 
     return full_path

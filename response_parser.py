@@ -1,7 +1,6 @@
 import json
 import sys
 
-
 class StreamingLLMParser:
     def __init__(self, call_tool):
         self.call_tool = call_tool

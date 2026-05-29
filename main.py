@@ -12,11 +12,11 @@ kb = KeyBindings()
 
 session = PromptSession(multiline=True, key_bindings=kb)
 
-@kb.add("enter")
+@kb.add("s-tab")
 def _(event):
     event.current_buffer.insert_text("\n")
 
-@kb.add("s-tab")
+@kb.add("enter")
 def _(event):
     event.app.exit(result=event.app.current_buffer.text)
 
@@ -51,17 +51,40 @@ def mkdir(path):
     safe_path = resolve_strict_path(path)
     safe_path.mkdir()
 
+def exec_cmd(cmd):
+    while True:
+        res = input(
+            f"The agent wants to run this command:\n`{cmd}`\n"
+            f"confirm execution of the command? [y/n]: "
+        ).lower()
+
+        if res == "y":
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True
+            )
+
+            return f"Exit code: {proc.returncode}; Stdout: `{proc.stdout}`; Stderr: `{proc.stderr}`"
+
+        elif res == "n":
+            print("Command execution was skipped")
+            return "ERROR: User refused to run this command"
+
+        else:
+            print("Invalid option")
+            continue
+
 register_tool("readfile", "Reads file using relative path", ["\"path\": string - relative (from project root) path to file", "\"startline\" (optional, default: 0): integer - the line from which the reading should begin", "\"endline\" (optional, default: 128): integer - line to which the file is to be read"], read_file)
 register_tool("writefile", "Overwrites file by new content using relative path **without creating**", ["\"path\": string - relative (from project root) path to file", "\"new_content\": string - new content for file" ], write_file)
 register_tool("readdir", "Lists up to 64 files and subdirectories in given directory", ["\"path\": string - relative (from project root) path to file", "\"start_index\" (optional, default: 5): integer - skips first N files" ], read_dir)
 register_tool("createfile", "Creates new empty file using relative path", ["\"path\": string - relative (from project root) path to file" ], create_file)
 register_tool("mkdir", "Creates new empty directory using relative path", ["\"path\": string - relative (from project root) path to file" ], mkdir)
+register_tool("runcmd", "Executes a shell command. Command and args must be given as single argument. Neither you nor the user have access to stdin, so whenever possible, run commands that do not require user intervention.", ["\"cmd\": string - name of cmd with arguments as single string" ], exec_cmd)
 
 tools_result = None
 
 parser = StreamingLLMParser(call_tool)
-
-prompt = session.prompt("Ask chatbot: ")
 
 def format_tool_results(tool_results):
     lines = [
@@ -89,56 +112,59 @@ messages = [
     {
         "role": "system",
         "content": build_systemprompt()
-    },
-    {
-        "role": "user",
-        "content": prompt
     }
 ]
 
-max_tool_rounds = 8
-tool_round = 0
-
 while True:
-    current_tool_results = []
-    assistant_content = ""
 
-    response = chat(
-        model="gemma3:4b",
-        messages=messages,
-        stream=True
-    )
+    max_tool_rounds = 16
+    tool_round = 0
 
-    for chunk in response:
-        content = chunk.message.content
-
-        if not content:
-            continue
-
-        assistant_content += content
-        results = parser.feed(content)
-
-        for result in results:
-            if isinstance(result, dict):
-                current_tool_results.append(result)
-
-    messages.append({
-        "role": "assistant",
-        "content": assistant_content
-    })
-
-    if not current_tool_results:
-        break
-
-    tool_round += 1
-    if tool_round >= max_tool_rounds:
-        print("\n[STOP] Max tool rounds reached.")
-        break
-
-    tools_result = current_tool_results
+    prompt = session.prompt(">>> ")
+    
     messages.append({
         "role": "user",
-        "content": format_tool_results(tools_result)
+        "content": prompt
     })
 
-    print(tools_result)
+    while True:
+        current_tool_results = []
+        assistant_content = ""
+
+        response = chat(
+            model="gemma3:4b",
+            messages=messages,
+            stream=True
+        )
+
+        for chunk in response:
+            content = chunk.message.content
+
+            if not content:
+                continue
+
+            assistant_content += content
+            results = parser.feed(content)
+
+            for result in results:
+                if isinstance(result, dict):
+                    current_tool_results.append(result)
+
+        messages.append({
+            "role": "assistant",
+            "content": assistant_content
+        })
+
+        if not current_tool_results:
+            break
+
+        tool_round += 1
+        if tool_round >= max_tool_rounds:
+            print("\n[STOP] Max tool rounds reached.")
+            break
+
+        tools_result = current_tool_results
+        messages.append({
+            "role": "user",
+            "content": format_tool_results(tools_result)
+        })
