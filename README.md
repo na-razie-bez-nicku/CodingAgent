@@ -7,7 +7,7 @@ To run it, you need to follow these steps:
 Run `python -m venv .venv` in this directory.
 
 ### Enter venv
-Run `source .venv/bin/activate` in this directory
+Run `source .venv/bin/activate` on Linux or run `.venv/Scripts/activate` on Windows in this directory
 
 ### Install it
 Run `pipx install .` in this directory
