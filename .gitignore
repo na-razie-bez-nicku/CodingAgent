@@ -1,6 +1,6 @@
-Scripts
-Lib
-Include
+.venv
+build
 tests
 __pycache__
 pyvenv.cfg
+.env

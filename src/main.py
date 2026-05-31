@@ -1,12 +1,17 @@
+from ollama import Client
 from ollama import chat
 from ollama import ChatResponse
-from os import listdir
+from os import listdir, environ
 import subprocess
 from systemprompt import register_tool, build_systemprompt, call_tool
 from response_parser import StreamingLLMParser
 from utils import resolve_safe_path, resolve_path_project_root_allowed, resolve_strict_path
 from prompt_toolkit import PromptSession
 from prompt_toolkit.key_binding import KeyBindings
+from dotenv import load_dotenv
+import sys
+
+load_dotenv()
 
 kb = KeyBindings()
 
@@ -75,16 +80,13 @@ def exec_cmd(*cmd):
             print("Invalid option")
             continue
 
-register_tool("readfile", "Reads file using relative path", ["\"path\": string - relative (from project root) path to file", "\"startline\" (optional, default: 0): integer - the line from which the reading should begin", "\"endline\" (optional, default: 128): integer - line to which the file is to be read"], read_file)
+# register_tool("readfile", "Reads file using relative path", ["\"path\": string - relative (from project root) path to file", "\"startline\" (optional, default: 0): integer - the line from which the reading should begin", "\"endline\" (optional, default: 128): integer - line to which the file is to be read"], read_file)
 register_tool("writefile", "Overwrites file with the new content using relative path **without creating**", ["\"path\": string - relative (from project root) path to file", "\"new_content\": string - new content for file" ], write_file)
 register_tool("readdir", "Lists up to 64 files and subdirectories in given directory", ["\"path\": string - relative (from project root) path to file", "\"start_index\" (optional, default: 5): integer - skips first N files" ], read_dir)
 register_tool("createfile", "Creates new empty file using relative path", ["\"path\": string - relative (from project root) path to file" ], create_file)
 register_tool("mkdir", "Creates new empty directory using relative path", ["\"path\": string - relative (from project root) path to file" ], mkdir)
 register_tool("runcmd", "Executes a shell command. Command and args must be given as single argument. Neither you nor the user have access to stdin, so whenever possible, run commands that do not require user intervention.", ["\"cmd\": string[] - name of cmd (index 0) with arguments (index 1-n)" ], exec_cmd)
 
-tools_result = None
-
-parser = StreamingLLMParser(call_tool)
 
 def format_tool_results(tool_results):
     lines = [
@@ -108,63 +110,75 @@ def format_tool_results(tool_results):
 
     return "\n".join(lines)
 
-messages = [
-    {
-        "role": "system",
-        "content": build_systemprompt()
-    }
-]
+def main():
+    # client = Client(
+    #     host="https://ollama.com",
+    #     headers={
+    #         "Authorization": f"Bearer {environ['OLLAMA_API_KEY']}"
+    #     }
+    # )
 
-while True:
+    tools_result = None
 
-    max_tool_rounds = 16
-    tool_round = 0
+    parser = StreamingLLMParser(call_tool)
 
-    prompt = session.prompt(">>> ")
-    
-    messages.append({
-        "role": "user",
-        "content": prompt
-    })
+    messages = [
+        {
+            "role": "system",
+            "content": build_systemprompt()
+        }
+    ]
 
     while True:
-        current_tool_results = []
-        assistant_content = ""
 
-        response = chat(
-            model="gemma3:4b",
-            messages=messages,
-            stream=True
-        )
+        max_tool_rounds = 16
+        tool_round = 0
 
-        for chunk in response:
-            content = chunk.message.content
-
-            if not content:
-                continue
-
-            assistant_content += content
-            results = parser.feed(content)
-
-            for result in results:
-                if isinstance(result, dict):
-                    current_tool_results.append(result)
-
-        messages.append({
-            "role": "assistant",
-            "content": assistant_content
-        })
-
-        if not current_tool_results:
-            break
-
-        tool_round += 1
-        if tool_round >= max_tool_rounds:
-            print("\n[STOP] Max tool rounds reached.")
-            break
-
-        tools_result = current_tool_results
+        prompt = session.prompt(">>> ")
+        
         messages.append({
             "role": "user",
-            "content": format_tool_results(tools_result)
+            "content": prompt
         })
+
+        while True:
+            current_tool_results = []
+            assistant_content = ""
+
+            response = chat(
+                model="gemma3:4b",
+                messages=messages,
+                stream=True
+            )
+
+            for chunk in response:
+                content = chunk.message.content
+
+                if not content:
+                    continue
+
+                assistant_content += content
+                results = parser.feed(content)
+
+                for result in results:
+                    if isinstance(result, dict):
+                        current_tool_results.append(result)
+
+            messages.append({
+                "role": "assistant",
+                "content": assistant_content
+            })
+
+            if not current_tool_results:
+                break
+
+            tool_round += 1
+            if tool_round >= max_tool_rounds:
+                print("\n[STOP] Max tool rounds reached.")
+                break
+
+            tools_result = current_tool_results
+            messages.append({
+                "role": "user",
+                "content": format_tool_results(tools_result)
+            })

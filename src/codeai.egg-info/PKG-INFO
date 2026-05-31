@@ -1,0 +1,17 @@
+Metadata-Version: 2.4
+Name: codeai
+Version: 1.0.0
+Requires-Dist: annotated-types==0.7.0
+Requires-Dist: anyio==4.13.0
+Requires-Dist: certifi==2026.5.20
+Requires-Dist: h11==0.16.0
+Requires-Dist: httpcore==1.0.9
+Requires-Dist: httpx==0.28.1
+Requires-Dist: idna==3.17
+Requires-Dist: ollama==0.6.2
+Requires-Dist: prompt_toolkit==3.0.52
+Requires-Dist: pydantic==2.13.4
+Requires-Dist: pydantic_core==2.46.4
+Requires-Dist: typing-inspection==0.4.2
+Requires-Dist: typing_extensions==4.15.0
+Requires-Dist: wcwidth==0.7.0
